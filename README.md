@@ -33,9 +33,9 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 Antes de começar, você precisará ter as seguintes ferramentas instaladas em sua máquina:
 
 * [.NET 8 SDK](https://dotnet.microsoft.com/)
-* [Microsoft SQL Server](https://www.microsoft.com/pt-br/sql-server/sql-server-downloads) (edição **Developer** recomendada para desenvolvimento)
-* [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup) (ou outra ferramenta de gerenciamento)
-* [Git](https://git-scm.com/) (opcional, mas recomendado)
+* [Microsoft SQL Server](https://www.microsoft.com/pt-br/sql-server/sql-server-downloads)
+* [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup) 
+* [Git](https://git-scm.com/) 
 
 ---
 
@@ -44,7 +44,7 @@ Antes de começar, você precisará ter as seguintes ferramentas instaladas em s
 ### 1. Clone o Repositório
 
 ```bash
-git clone https://seu-repositorio-aqui.git
+git clone https://github.com/Eduardo-Bomfim/Sistema-de-login.git
 cd AuthSystem
 ```
 
@@ -81,14 +81,13 @@ dotnet run
 A API estará disponível em:
 
 * `http://localhost:5081`
-* `https://localhost:7234`
 
 ### 6. Teste com o Swagger
 
 Acesse no navegador:
 
 ```
-https://localhost:7234/swagger
+https://localhost:5081/swagger
 ```
 
 ---
