@@ -6,6 +6,7 @@ namespace AuthSystem.src.Interfaces
     public interface IAuth
     {
         Task<User?> RegisterAsync(UserRegisterDto userRegisterDto);
-        Task<string?> LoginAsync(UserLoginDto userLoginDto);
+        Task<LoginResponseDto?> LoginAsync(UserLoginDto userLoginDto);
+        Task<LoginResponseDto?> RefreshTokenAsync(string refreshToken);
     }
 }
