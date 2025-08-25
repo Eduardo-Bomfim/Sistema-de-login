@@ -38,7 +38,7 @@ namespace AuthSystem.src.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
-            };            
+            };
         }
 
         public async Task<User?> RegisterAsync(UserRegisterDto userRegisterDto)

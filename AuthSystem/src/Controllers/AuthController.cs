@@ -30,20 +30,45 @@ namespace AuthSystem.src.Controllers
             var token = await _authService.LoginAsync(userLoginDto);
             if (token == null)
             {
-                return Unauthorized("Invalid username or password.");
+                return BadRequest("Invalid username or password.");
             }
-            return Ok(token);
+
+            SetRefreshTokenInCookie(token.RefreshToken);
+            Response.Cookies.Append("accessToken", token.AccessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddMinutes(15)
+            });
+            return Ok("Login successful. Tokens stored in cookies.");
         }
 
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RefreshToken()
         {
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return Unauthorized("No refresh token provided.");
+            }
+
             var responseToken = await _authService.RefreshTokenAsync(refreshToken);
             if (responseToken == null)
             {
                 return Unauthorized("Invalid refresh token.");
             }
-            return Ok(responseToken);
+
+            SetRefreshTokenInCookie(responseToken.RefreshToken);
+            Response.Cookies.Append("accessToken", responseToken.AccessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddMinutes(15)
+            });
+
+            return Ok("Token refreshed. New tokens stored in cookies.");
         }
 
         [HttpGet("user-data")]
@@ -61,6 +86,18 @@ namespace AuthSystem.src.Controllers
         public IActionResult GetAdminData()
         {
             return Ok(new { message = "This is admin data." });
+        }
+
+        private void SetRefreshTokenInCookie(string refreshToken)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = DateTime.UtcNow.AddDays(7),
+                Secure = true,
+                SameSite = SameSiteMode.None
+            };
+            Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
         }
     }
 }
