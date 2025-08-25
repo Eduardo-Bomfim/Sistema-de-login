@@ -8,9 +8,10 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 ## ✨ Funcionalidades Principais
 
 * **Registro de Usuários**: Endpoint para criar novos usuários com validação de dados e armazenamento seguro de senhas.
-* **Autenticação de Usuários**: Endpoint de login que retorna um **JSON Web Token (JWT)** em caso de sucesso.
+* **Autenticação Segura com Cookies**: O login e a renovação de sessão enviam os tokens (**AccessToken** e **RefreshToken**) em cookies HttpOnly, protegendo-os contra ataques de roubo de token (XSS).
 * **Segurança de Senhas**: As senhas são hasheadas usando o algoritmo **BCrypt**, garantindo que nunca sejam armazenadas em texto plano.
-* **Gerenciamento de Sessão Stateless**: Utiliza **tokens JWT** para autenticar requisições, ideal para arquiteturas de microsserviços e clientes desacoplados.
+* **Gestão de Sessão com Refresh Tokens**: Utiliza **Access Tokens** de curta duração e **Refresh Tokens** de longa duração para manter as sessões seguras e ativas.
+* **Autorização Baseada em Funções (Roles)**: Suporte para diferenciar utilizadores (**User**) de administradores (**Admin**), com endpoints protegidos por função.
 * **Documentação Interativa**: Integração com o **Swagger (OpenAPI)** para documentar e testar os endpoints da API diretamente pelo navegador.
 * **Arquitetura Limpa**: Separação de responsabilidades entre **Controllers (API)**, **Services (Lógica de Negócio)** e **Data (Acesso a Dados)**.
 
@@ -21,7 +22,7 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 * **Framework**: .NET 8
 * **Linguagem**: C#
 * **Banco de Dados**: Microsoft SQL Server (configurado com Entity Framework Core 8)
-* **Autenticação**: JSON Web Tokens (JWT)
+* **Autenticação**: JSON Web Tokens (JWT) em **Cookies HttpOnly**
 * **Hashing de Senha**: BCrypt.Net-Next
 * **Documentação da API**: Swashbuckle (Swagger)
 * **ORM**: Entity Framework Core 8
@@ -34,8 +35,8 @@ Antes de começar, você precisará ter as seguintes ferramentas instaladas em s
 
 * [.NET 8 SDK](https://dotnet.microsoft.com/)
 * [Microsoft SQL Server](https://www.microsoft.com/pt-br/sql-server/sql-server-downloads)
-* [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup) 
-* [Git](https://git-scm.com/) 
+* [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup)
+* [Git](https://git-scm.com/)
 
 ---
 
@@ -50,7 +51,7 @@ cd AuthSystem
 
 ### 2. Configure a String de Conexão
 
-No arquivo `appsettings.json`, ajuste a **DefaultConnection** para apontar para a sua instância do SQL Server (a configuração padrão usa Autenticação do Windows):
+No arquivo `appsettings.json`, ajuste a **DefaultConnection** para apontar para a sua instância do SQL Server:
 
 ```json
 "ConnectionStrings": {
@@ -66,7 +67,7 @@ dotnet tool install --global dotnet-ef
 
 ### 4. Aplique as Migrações
 
-Este comando criará o banco de dados `AuthDb` e a tabela `Users`:
+Este comando criará o banco de dados `AuthDb` e as tabelas necessárias:
 
 ```bash
 dotnet ef database update
@@ -96,14 +97,15 @@ https://localhost:5081/swagger
 
 ```
 AuthSystem/
-├── Controllers/     # Recebem requisições HTTP e retornam respostas
-├── Data/            # Contém o DbContext do Entity Framework
-├── DTOs/            # Data Transfer Objects (dados entre cliente e servidor)
-├── Migrations/      # Arquivos de migração do EF Core
-├── Models/          # Entidades do domínio (ex: User)
-├── Services/        # Lógica de negócio da aplicação
-├── appsettings.json # Configurações
-└── Program.cs       # Ponto de entrada da aplicação
+├── src/
+│   ├── Controllers/     # Recebem requisições HTTP e retornam respostas
+│   ├── Data/            # Contém o DbContext do Entity Framework
+│   ├── DTOs/            # Data Transfer Objects (dados entre cliente e servidor)
+│   ├── Models/          # Entidades do domínio (ex: User)
+│   ├── Services/        # Lógica de negócio da aplicação
+├── Migrations/          # Ficheiros de migração do EF Core
+├── appsettings.json     # Configurações
+└── Program.cs           # Ponto de entrada da aplicação
 ```
 
 ---
@@ -134,9 +136,32 @@ AuthSystem/
 
 ```json
 {
-  "usernameOrEmail": "seu_usuario_ou_email",
+  "username": "seu_usuario",
   "password": "sua_senha"
 }
 ```
+
+```json
+{
+  "email": "seu_email",
+  "password": "sua_senha"
+}
+```
+
+**Resposta de Sucesso:** `200 OK`
+
+```json
+{
+  "message": "Login successful. Tokens stored in cookies."
+}
+```
+
+#### **Renovar Token**
+
+`POST /api/auth/refresh-token`
+
+Lê o **RefreshToken** do cookie e, se for válido, renova ambos os tokens, devolvendo-os em novos cookies.
+
+**Body (JSON):** Nenhum.
 
 ---
