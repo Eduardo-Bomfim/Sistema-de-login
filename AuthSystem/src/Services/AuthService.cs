@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using AuthSystem.src.Data;
 using AuthSystem.src.DTOs;
@@ -15,7 +16,7 @@ namespace AuthSystem.src.Services
         private readonly AuthDbContext _context = context;
         private readonly IConfiguration _configuration = configuration;
 
-        public async Task<string?> LoginAsync(UserLoginDto userLoginDto)
+        public async Task<LoginResponseDto?> LoginAsync(UserLoginDto userLoginDto)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == userLoginDto.Username || u.Email == userLoginDto.Email);
@@ -25,7 +26,19 @@ namespace AuthSystem.src.Services
                 return null;
             }
 
-            return CreateToken(user);
+            string accessToken = CreateToken(user);
+            string refreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.TokenCreated = DateTime.UtcNow;
+            user.TokenExpires = DateTime.UtcNow.AddDays(7);
+            await _context.SaveChangesAsync();
+
+            return new LoginResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
         }
 
         public async Task<User?> RegisterAsync(UserRegisterDto userRegisterDto)
@@ -41,13 +54,39 @@ namespace AuthSystem.src.Services
             {
                 Username = userRegisterDto.Username,
                 PasswordHash = PasswordHash,
-                Email = userRegisterDto.Email
+                Email = userRegisterDto.Email,
+                Role = "User" // Default role assignment
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             return user;
+        }
+
+        public async Task<LoginResponseDto?> RefreshTokenAsync(string refreshToken)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+
+            if (user == null || user.TokenExpires < DateTime.UtcNow)
+            {
+                return null;
+            }
+
+            var newAccessToken = CreateToken(user);
+            var newRefreshToken = Guid.NewGuid().ToString();
+
+            user.RefreshToken = newRefreshToken;
+            user.TokenCreated = DateTime.UtcNow;
+            user.TokenExpires = DateTime.UtcNow.AddDays(7);
+
+            await _context.SaveChangesAsync();
+
+            return new LoginResponseDto
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken
+            };
         }
 
         private string CreateToken(User user)
@@ -57,6 +96,7 @@ namespace AuthSystem.src.Services
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.Username),
                 new(ClaimTypes.Email, user.Email),
+                new(ClaimTypes.Role, user.Role),
             };
 
             var appSettingsToken = _configuration.GetSection("AppSettings:Token").Value;
@@ -72,7 +112,7 @@ namespace AuthSystem.src.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(1),
+                Expires = DateTime.UtcNow.AddMinutes(15),
                 SigningCredentials = creds
             };
 
@@ -81,5 +121,14 @@ namespace AuthSystem.src.Services
 
             return tokenHandler.WriteToken(token);
         }
+
+        private static string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
     }
 }
