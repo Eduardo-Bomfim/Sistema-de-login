@@ -2,7 +2,6 @@ using System.Security.Claims;
 using AuthSystem.src.DTOs;
 using AuthSystem.src.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthSystem.src.Controllers
@@ -12,7 +11,7 @@ namespace AuthSystem.src.Controllers
     public class AuthController(AuthService authService) : ControllerBase
     {
         private readonly AuthService _authService = authService;
-
+        
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
         {
@@ -70,7 +69,28 @@ namespace AuthSystem.src.Controllers
 
             return Ok("Token refreshed. New tokens stored in cookies.");
         }
+        
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
+        {
+            await _authService.ForgotPasswordAsync(forgotPasswordDto);
+            return Ok(new { message = "If the email is registered, a password reset link has been sent." });
+        }
 
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
+        {
+            var result = await _authService.ResetPasswordAsync(resetPasswordDto);
+
+            if (!result)
+            {
+                return BadRequest("Invalid or expired reset token.");
+            }
+
+            return Ok("Password has been reset successfully.");
+        }
+
+        // Get user data - accessible to both User and Admin roles
         [HttpGet("user-data")]
         [Authorize(Roles = "User, Admin")]
         public IActionResult GetUserData()
@@ -88,6 +108,7 @@ namespace AuthSystem.src.Controllers
             return Ok(new { message = "This is admin data." });
         }
 
+        // Helper method to set refresh token in HttpOnly cookie
         private void SetRefreshTokenInCookie(string refreshToken)
         {
             var cookieOptions = new CookieOptions
