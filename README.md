@@ -14,6 +14,7 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 * **Autorização Baseada em Funções (Roles)**: Suporte para diferenciar utilizadores (**User**) de administradores (**Admin**), com endpoints protegidos por função.
 * **Documentação Interativa**: Integração com o **Swagger (OpenAPI)** para documentar e testar os endpoints da API diretamente pelo navegador.
 * **Arquitetura Limpa**: Separação de responsabilidades entre **Controllers (API)**, **Services (Lógica de Negócio)** e **Data (Acesso a Dados)**.
+* **Recuperação de Senha Segura**: Fluxo completo de **"esqueci a minha senha"** com tokens de redefinição enviados por **email (simulado com Mailtrap)**.
 
 ---
 
@@ -24,6 +25,7 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 * **Banco de Dados**: Microsoft SQL Server (configurado com Entity Framework Core 8)
 * **Autenticação**: JSON Web Tokens (JWT) em **Cookies HttpOnly**
 * **Hashing de Senha**: BCrypt.Net-Next
+* **Envio de Email**: Mailtrap.io com MailKit
 * **Documentação da API**: Swashbuckle (Swagger)
 * **ORM**: Entity Framework Core 8
 
@@ -36,6 +38,7 @@ Antes de começar, você precisará ter as seguintes ferramentas instaladas em s
 * [.NET 8 SDK](https://dotnet.microsoft.com/)
 * [Microsoft SQL Server](https://www.microsoft.com/pt-br/sql-server/sql-server-downloads)
 * [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup)
+* [Mailtrap.io](https://mailtrap.io/pt/)(Conta gratuita para testar o envio de emails)
 * [Git](https://git-scm.com/)
 
 ---
@@ -48,8 +51,24 @@ Antes de começar, você precisará ter as seguintes ferramentas instaladas em s
 git clone https://github.com/Eduardo-Bomfim/Sistema-de-login.git
 cd AuthSystem
 ```
+### 2. Configure as Credenciais
 
-### 2. Configure a String de Conexão
+No terminal, na raiz do projeto, configure os seus **User Secrets**:
+
+```bash
+dotnet user-secrets init
+```
+
+Configure as credenciais do **Mailtrap**:
+
+```bash
+dotnet user-secrets set "Mailtrap:Host" "sandbox.smtp.mailtrap.io"
+dotnet user-secrets set "Mailtrap:Port" "2525"
+dotnet user-secrets set "Mailtrap:Username" "SEU_USERNAME_DO_MAILTRAP"
+dotnet user-secrets set "Mailtrap:Password" "SUA_SENHA_DO_MAILTRAP"
+```
+
+### 3. Configure a String de Conexão
 
 No arquivo `appsettings.json`, ajuste a **DefaultConnection** para apontar para a sua instância do SQL Server:
 
@@ -59,13 +78,13 @@ No arquivo `appsettings.json`, ajuste a **DefaultConnection** para apontar para 
 }
 ```
 
-### 3. Instale as Ferramentas do EF Core
+### 4. Instale as Ferramentas do EF Core
 
 ```bash
 dotnet tool install --global dotnet-ef
 ```
 
-### 4. Aplique as Migrações
+### 5. Aplique as Migrações
 
 Este comando criará o banco de dados `AuthDb` e as tabelas necessárias:
 
@@ -73,7 +92,7 @@ Este comando criará o banco de dados `AuthDb` e as tabelas necessárias:
 dotnet ef database update
 ```
 
-### 5. Execute a Aplicação
+### 6. Execute a Aplicação
 
 ```bash
 dotnet run
@@ -83,7 +102,7 @@ A API estará disponível em:
 
 * `http://localhost:5081`
 
-### 6. Teste com o Swagger
+### 7. Teste com o Swagger
 
 Acesse no navegador:
 
@@ -163,5 +182,34 @@ AuthSystem/
 Lê o **RefreshToken** do cookie e, se for válido, renova ambos os tokens, devolvendo-os em novos cookies.
 
 **Body (JSON):** Nenhum.
+
+---
+
+### 🔒 Recuperação de Senha
+
+#### Solicitar Redefinição de Senha
+
+**POST** `/api/auth/forgot-password`
+
+```json
+{
+  "email": "seu_email@exemplo.com"
+}
+```
+
+Envia um email (capturado pelo Mailtrap) com um token de redefinição.
+
+#### Redefinir Senha
+
+**POST** `/api/auth/reset-password`
+
+```json
+{
+  "token": "O_TOKEN_RECEBIDO_NO_EMAIL",
+  "newPassword": "sua_nova_senha_forte"
+}
+```
+
+Valida o token e atualiza a senha do utilizador.
 
 ---
