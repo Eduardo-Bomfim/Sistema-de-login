@@ -43,11 +43,11 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<AuthService, AuthService>();
+builder.Services.AddScoped<EmailService, EmailService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {   
-
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>

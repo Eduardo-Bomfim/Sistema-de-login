@@ -10,9 +10,13 @@ namespace AuthSystem.src.Models
         // Token management properties
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime TokenCreated { get; set; }
-        public DateTime TokenExpires { get; set; }  
+        public DateTime TokenExpires { get; set; }
 
         // Role property for user roles (e.g., Admin, User)
         public string Role { get; set; } = string.Empty;
+        
+        // Password reset properties
+        public string? PasswordResetToken { get; set; }
+        public DateTime? ResetTokenExpires { get; set; }
     }
 }
