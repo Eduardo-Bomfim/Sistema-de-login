@@ -11,10 +11,11 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace AuthSystem.src.Services
 {
-    public class AuthService(AuthDbContext context, IConfiguration configuration) : IAuth
+    public class AuthService(AuthDbContext context, IConfiguration configuration, EmailService emailService) : IAuth
     {
         private readonly AuthDbContext _context = context;
         private readonly IConfiguration _configuration = configuration;
+        private readonly EmailService _emailService = emailService;
 
         public async Task<LoginResponseDto?> LoginAsync(UserLoginDto userLoginDto)
         {
@@ -122,7 +123,7 @@ namespace AuthSystem.src.Services
             return tokenHandler.WriteToken(token);
         }
 
-        private static string GenerateRefreshToken()
+        private string GenerateRefreshToken()
         {
             var randomNumber = new byte[64];
             using var rng = RandomNumberGenerator.Create();
@@ -130,5 +131,40 @@ namespace AuthSystem.src.Services
             return Convert.ToBase64String(randomNumber);
         }
 
+        public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == resetPasswordDto.Token);
+
+            if (user == null || user.ResetTokenExpires < DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPasswordDto.NewPassword);
+            user.PasswordResetToken = null;
+            user.ResetTokenExpires = null;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == forgotPasswordDto.Email);
+
+            if (user == null)
+            {
+                return true; // To prevent email enumeration;
+            }
+
+            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(64));
+            user.PasswordResetToken = token;
+            user.ResetTokenExpires = DateTime.UtcNow.AddMinutes(15);
+
+            await _context.SaveChangesAsync();
+
+            await _emailService.SendPasswordResetEmailAsync(user.Email, token);
+            return true;
+        }
     }
 }
