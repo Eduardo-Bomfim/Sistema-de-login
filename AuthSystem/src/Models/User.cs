@@ -14,9 +14,18 @@ namespace AuthSystem.src.Models
 
         // Role property for user roles (e.g., Admin, User)
         public string Role { get; set; } = string.Empty;
-        
+
         // Password reset properties
         public string? PasswordResetToken { get; set; }
         public DateTime? ResetTokenExpires { get; set; }
+
+        // Account lockout properties
+        public int FailedLoginAttempts { get; set; }
+        public DateTime? LockoutEnd { get; set; }
+
+        // Email confirmation properties
+        public bool IsEmailConfirmed { get; set; } = false;
+        public string? EmailConfirmationToken { get; set; }
+        public DateTime? EmailConfirmationTokenExpires { get; set; }
     }
 }

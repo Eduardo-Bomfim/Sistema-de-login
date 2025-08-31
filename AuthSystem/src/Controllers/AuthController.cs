@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using AuthSystem.src.DTOs;
-using AuthSystem.src.Services;
+using AuthSystem.src.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,17 +8,17 @@ namespace AuthSystem.src.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(AuthService authService) : ControllerBase
+    public class AuthController(IAuth authService) : ControllerBase
     {
-        private readonly AuthService _authService = authService;
+        private readonly IAuth _authService = authService;
         
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
         {
-            var user = await _authService.RegisterAsync(userRegisterDto);
+            var (user, errorMessage) = await _authService.RegisterAsync(userRegisterDto);
             if (user == null)
             {
-                return BadRequest("Username or Email already exists.");
+                return BadRequest(new { message = errorMessage});
             }
             return Ok(user);
         }
@@ -26,10 +26,10 @@ namespace AuthSystem.src.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDto userLoginDto)
         {
-            var token = await _authService.LoginAsync(userLoginDto);
+            var (token, errorMessage) = await _authService.LoginAsync(userLoginDto);
             if (token == null)
             {
-                return BadRequest("Invalid username or password.");
+                return BadRequest(new { message = errorMessage });
             }
 
             SetRefreshTokenInCookie(token.RefreshToken);
@@ -40,7 +40,7 @@ namespace AuthSystem.src.Controllers
                 SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddMinutes(15)
             });
-            return Ok("Login successful. Tokens stored in cookies.");
+            return Ok(new { message = "Login successful. Tokens stored in cookies." });
         }
 
         [HttpPost("refresh-token")]
@@ -49,13 +49,13 @@ namespace AuthSystem.src.Controllers
             var refreshToken = Request.Cookies["refreshToken"];
             if (string.IsNullOrEmpty(refreshToken))
             {
-                return Unauthorized("No refresh token provided.");
+                return Unauthorized(new { message = "Refresh token is missing." });
             }
 
             var responseToken = await _authService.RefreshTokenAsync(refreshToken);
             if (responseToken == null)
             {
-                return Unauthorized("Invalid refresh token.");
+                return Unauthorized(new { message = "Invalid refresh token." });
             }
 
             SetRefreshTokenInCookie(responseToken.RefreshToken);
@@ -67,7 +67,7 @@ namespace AuthSystem.src.Controllers
                 Expires = DateTime.UtcNow.AddMinutes(15)
             });
 
-            return Ok("Token refreshed. New tokens stored in cookies.");
+            return Ok(new { message = "Token refreshed successfully." });
         }
         
         [HttpPost("forgot-password")]
@@ -84,12 +84,23 @@ namespace AuthSystem.src.Controllers
 
             if (!result)
             {
-                return BadRequest("Invalid or expired reset token.");
+                return BadRequest(new { message = "Invalid or expired token." });
             }
 
-            return Ok("Password has been reset successfully.");
+            return Ok(new { message = "Password has been reset successfully." });
         }
 
+        [HttpGet("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
+        {
+            var result = await _authService.ConfirmEmailAsync(email, token);
+            if (!result)
+            {
+                return BadRequest(new { message = "Invalid or expired token." });
+            }
+            return Ok(new { message = "Email verified successfully." });
+        }
+        
         // Get user data - accessible to both User and Admin roles
         [HttpGet("user-data")]
         [Authorize(Roles = "User, Admin")]
@@ -106,6 +117,12 @@ namespace AuthSystem.src.Controllers
         public IActionResult GetAdminData()
         {
             return Ok(new { message = "This is admin data." });
+        }
+
+        [HttpGet("test-error")]
+        public IActionResult TestError()
+        {
+            throw new Exception("Este é um erro de teste para verificar o middleware!");
         }
 
         // Helper method to set refresh token in HttpOnly cookie
