@@ -15,7 +15,8 @@ A arquitetura foi projetada para ser **limpa, escalável e segura**, utilizando 
 * **Documentação Interativa**: Integração com o **Swagger (OpenAPI)** para documentar e testar os endpoints da API diretamente pelo navegador.
 * **Arquitetura Limpa**: Separação de responsabilidades entre **Controllers (API)**, **Services (Lógica de Negócio)** e **Data (Acesso a Dados)**.
 * **Recuperação de Senha Segura**: Fluxo completo de **"esqueci a minha senha"** com tokens de redefinição enviados por **email (simulado com Mailtrap)**.
-
+* **Verificação de Email: Os novos utilizadores precisam de verificar o seu email através de um link único antes de poderem fazer login, garantindo a validade dos emails registados.**
+* **Proteção Contra Força Bruta: Implementação de um mecanismo de bloqueio de conta temporário após 5 tentativas de login falhadas.**
 ---
 
 ## 🛠️ Tecnologias Utilizadas
@@ -181,8 +182,11 @@ AuthSystem/
 
 Lê o **RefreshToken** do cookie e, se for válido, renova ambos os tokens, devolvendo-os em novos cookies.
 
-**Body (JSON):** Nenhum.
+#### Verificar Email
 
+`GET /api/auth/verify-email`
+
+* Endpoint acedido através do **link enviado por email** para verificar a conta de um novo utilizador.
 ---
 
 ### 🔒 Recuperação de Senha
