@@ -1,4 +1,6 @@
 using AuthSystem.src.Data;
+using AuthSystem.src.Interfaces;
+using AuthSystem.src.Middleware;
 using AuthSystem.src.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -42,8 +44,8 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<AuthService, AuthService>();
-builder.Services.AddScoped<EmailService, EmailService>();
+builder.Services.AddScoped<IAuth, AuthService>();
+builder.Services.AddScoped<IEmail, EmailService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -68,6 +70,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionHandlerMidddleware>();
 
 if (app.Environment.IsDevelopment())
 {
